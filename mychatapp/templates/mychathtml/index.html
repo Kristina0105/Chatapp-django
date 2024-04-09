@@ -1,0 +1,243 @@
+{% extends 'base.html' %} 
+
+{% load humanize %}
+
+{% block content %}
+
+<style>
+  a{
+    color: black;
+  }
+
+  a:hover{
+    color: #662d91;
+  }
+</style>
+
+
+
+<div class="header">
+  <div class="sub-div">
+    <a href="{% url 'chats' %}">
+      <h2 style="font-weight: bold">MY Chatt</h2>
+    </a>
+    <p class="para">@<span style="margin-right: 10px">
+        <strong>{{request.user.username}}</strong></span>
+    </p>
+  </div>
+</div>
+
+<div class="control-icons">
+  <div class="icons-container" id="not_container">
+    <a href="{% url 'notifications' %}">
+      <i class="fa-solid fa-bell"></i>
+      {% if num_notif == 0 %} {% else %}
+      <div class="bg"><small id="noti">{{num_notif}}</small></div>
+      {% endif %} {% comment %}
+      <div class="bg"><small id="noti">2</small></div>
+      {% endcomment %}
+    </a>
+  </div>
+
+  <div class="icons-container" id="fri_container">
+    <a href="{% url 'f-requests' %}">
+      <i class="fa-solid fa-users-line"></i>
+      {% if num_friend_req == 0 %} {% else %}
+      <div class="bg"><small id="fr">{{num_friend_req}}</small></div>
+      {% endif %} {% comment %}
+      <div class="bg"><small id="fr">3</small></div>
+      {% endcomment %}
+    </a>
+  </div>
+
+  <div class="icons-container">
+    <a href="{% url 'suggestions' %}">
+      <i class="fa-solid fa-user-plus"></i>
+    </a>
+  </div>
+
+
+  <div class="icons-container">
+    <a href="{% url 'update_profile' %}">
+      <i class="fa-solid fa-gear"></i>
+    </a>
+  </div>
+
+
+  <div class="icons-container">
+    <a href="{% url 'signout' %}">
+      <i class="fa-solid fa-right-from-bracket"></i>
+    </a>
+  </div>
+
+
+  {% if profile.profile_picture %}
+
+  <div class="user-profile">
+    <img src="{{profile.profile_picture.url}}" alt="">
+  </div>
+
+  {% else %}
+
+  <div class="user-profile">
+    <img src="" alt="">
+  </div>
+  
+  {% endif %}
+
+  
+</div>
+
+<div class="chatbody">
+  <h3>Chats</h3>
+  <p class="para">You have {{ num_msg }} new messages</p>
+
+  <div class="innerchatbody">
+
+    
+    {% for friend in friend_messages %}
+   
+
+    <a href="{% url 'detail' friend.friend.id %}">
+
+
+      <div class="chatbox">
+
+        {% if friend.friend.profiles.profile_picture %}
+        
+        <div class="pic">
+          <img src="{{friend.friend.profiles.profile_picture.url}}" alt="">
+        </div>
+
+        {% else %}
+
+        <div class="pic">
+          <img src="" alt="">
+        </div>
+        
+        {% endif %}
+
+       
+  
+        <div class="name_msg">
+  
+          <div class="name1">
+            <h4>{{friend.friend.username}}</h4>
+            <small>{{friend.last_message.n_created | naturaltime}}</small>
+           </div>
+  
+           <div class="name2">
+            {% if friend.last_message %}
+            <small>{{friend.last_message.message | truncatechars:30}}</small>
+            {% else %}
+            <small>How are you today?</small>
+            {% endif %}
+
+            {% if friend.num_msg > 0 %}
+            <div class="num_of_msg">{{friend.num_msg}}</div>
+            {% endif %}
+            <form action="{% url 'clear_chat' pk=friend.friend.id %}" method="post" id="delete-chat-form">
+                {% csrf_token %}
+                <div class="icons-container">
+                    <button type="submit" class="delete-chat-btn" style="border: none; background-color: transparent; cursor: pointer;">
+                        <i class="fa-solid fa-trash" style="font-size: 20px; color: #999;"></i>
+                    </button>
+                </div>
+            </form>
+
+           </div>
+
+        </div>
+
+      </div>
+  
+  
+  </a>
+      
+    {% endfor %}
+      
+
+
+   
+  </div>
+</div>
+
+<script>
+    $(document).ready(function() {
+    $('.delete-chat-btn').click(function(event) {
+      event.preventDefault(); // Предотвращаем действие по умолчанию (переход по ссылке)
+      var url = $(this).attr('href'); // Получаем URL из атрибута href
+      $.post(url, function(response) {
+        // Обработка успешного ответа от сервера
+        console.log(response);
+        // Дополнительные действия при необходимости
+      }).fail(function() {
+        // Обработка ошибки
+        console.log('Failed to delete chat.');
+      });
+    });
+  });
+  // creating small badges that holds number of notifications and friend-requests
+  let fr_bg = document.createElement("div");
+  let n_bg = document.createElement("div");
+  
+
+  // selecting the container elements for the small badges created above
+  let n_bg_container = document.querySelector("#not_container")
+  let fr_bg_container = document.querySelector("#fri_container")
+
+  
+
+
+  // this function helps to fetch the total number of unseen friend-request for the loggin user every 1 seconds
+  
+  setInterval(getFriendRequest, 2000)
+  function getFriendRequest() {
+    let url = "{% url 'get-friend-request' %}";
+    console.log("okay");
+
+    fetch(url)
+      .then((response) => {
+        return response.json();
+      })
+      .then((data) => {
+   
+        if (data > 0) {
+          fr_bg.innerText = data;
+          fr_bg.classList.add("bg");
+          console.log(fr_bg);
+        }
+        fr_bg_container.append(fr_bg)
+      })
+      .catch((error) => {
+        console.log();
+      });
+  }
+
+
+// this function helps to fetch the total number of unseen notification for the logged-in user every 1 seconds
+  setInterval(fetchNotifications, 2000)
+  function fetchNotifications() {
+    let url = "{% url 'get-notifications' %}";
+
+    fetch(url)
+      .then((response) => {
+        return response.json();
+      })
+      .then((data) => {
+
+        if (data > 0) {
+          n_bg.innerText = data;
+          n_bg.classList.add("bg");
+        }
+        n_bg_container.append(n_bg)
+      
+      })
+      .catch((error) => {
+        console.log();
+      });
+  }
+
+</script>
+
+{% endblock %}
